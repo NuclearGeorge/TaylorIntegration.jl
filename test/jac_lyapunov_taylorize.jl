@@ -6,20 +6,21 @@ using Test
 using TaylorIntegration
 import LinearAlgebra: I, tr
 
-@testset "Test `stabilitymatrix!`" begin
+#Lorenz system parameters
+const σ = 16.0
+const β = 4.0
+const ρ = 45.92
+
+#Taylor1 variables for evaluation of eqs of motion
+const _order = 28
+
+@testset "Test @taylorize'd version of evaluation of user-provided Jacobian function" begin
     q0 = rand(3) # [19.0, 20.0, 50.0]; #the initial condition
     t0 = 0.0 #the initial time
     dof = length(q0) # degrees of freedom
     Q0 = Matrix{Float64}(I, dof, dof) # dof x dof identity matrix
     x0 = vcat(q0, reshape(Q0, dof*dof)); # initial conditions: eqs of motion and variationals
 
-    #Lorenz system parameters
-    const σ = 16.0
-    const β = 4.0
-    const ρ = 45.92
-
-    #Taylor1 variables for evaluation of eqs of motion
-    const _order = 28
     t = t0+Taylor1(_order)
     x = Taylor1.(x0, _order);
     dx = similar(x);
@@ -57,21 +58,22 @@ import LinearAlgebra: I, tr
     TaylorIntegration.stabilitymatrix!(lorenz!, t, x[1:dof], δx, dδx, jac2, _δv)
     @test jac2 == jac
 
-    # ex = :(function lorenz_jac_parsed!(t, x, jac)
-    #     jac[1,1] = -σ+zero(x[1]); jac[1,2] = σ+zero(x[1]); jac[1,3] = zero(x[1])
-    #     jac[2,1] = ρ-x[3]; jac[2,2] = -1.0+zero(x[1]); jac[2,3] = -x[1]
-    #     jac[3,1] = x[2]; jac[3,2] = x[1]; jac[3,3] = -β+zero(x[1])
-    #     nothing
-    # end)
-    #
-    # @eval $ex
-    #
-    # TaylorIntegration._make_parsed_jetcoeffs(ex)
+    ex = :(function lorenz_jac_parsed!(t, x, jac)
+        jac[1,1] = -σ+zero(x[1]); jac[1,2] = σ+zero(x[1]); jac[1,3] = zero(x[1])
+        jac[2,1] = ρ-x[3]; jac[2,2] = -1.0+zero(x[1]); jac[2,3] = -x[1]
+        jac[3,1] = x[2]; jac[3,2] = x[1]; jac[3,3] = -β+zero(x[1])
+        nothing
+    end)
+
+    @eval $ex
 
     # output from _make_parsed_jetcoeffs, modify:
     # - jac::AbstractVector -> jac::AbstractMatrix
     # - comment recursion relations
     # - fix order loop: for ord = 1:order-1 -> for ord = 1:order
+
+    # TaylorIntegration._make_parsed_jetcoeffs(ex)
+
     function TaylorIntegration.jetcoeffs!(t::Taylor1{T}, x::AbstractVector{Taylor1{S}}, jac::AbstractMatrix{Taylor1{S}}, ::Val{lorenz_jac_parsed!}) where {T <: Real, S <: Number}
           order = t.order
           tmp446 = Taylor1(-(constant_term(σ)), order)

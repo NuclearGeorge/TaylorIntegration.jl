@@ -10,7 +10,7 @@ testfiles = (
     "common.jl",
     "rootfinding.jl",
     "taylorize.jl",
-    "taylorize_lyapunov_jac.jl"
+    "jac_lyapunov_taylorize.jl"
     )
 
 for file in testfiles
