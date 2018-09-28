@@ -21,7 +21,7 @@ function lorenz!(t, x, dx)
 end
 
 #Lorenz system Jacobian (in-place):
-function lorenz_jac!(jac, t, x)
+function lorenz_jac!(t, x, jac)
     jac[1,1] = -σ+zero(x[1]); jac[1,2] = σ+zero(x[1]); jac[1,3] = zero(x[1])
     jac[2,1] = ρ-x[3]; jac[2,2] = -1.0+zero(x[1]); jac[2,3] = -x[1]
     jac[3,1] = x[2]; jac[3,2] = x[1]; jac[3,3] = -β+zero(x[1])
@@ -31,7 +31,7 @@ end
 @testset "Test `stabilitymatrix!`" begin
     t0 = rand() #the initial time
     xi = set_variables("δ", order=1, numvars=3)
-    t_ = Taylor1([t0,1],_order)
+    t_ = t0+Taylor1(_order)
     δx = Array{TaylorN{Taylor1{Float64}}}(undef, 3)
     dδx = similar(δx)
     jac_auto = Array{Taylor1{Float64}}(undef, 3, 3)
@@ -84,7 +84,7 @@ end
     x0 = vcat(q0, reshape(Q0, dof*dof)) # initial conditions: eqs of motion and variationals
 
     #Taylor1 variables for evaluation of eqs of motion
-    t = Taylor1(_order)
+    t = Taylor1(t0, _order)
     x = Taylor1.(x0, _order)
     dx = similar(x)
 
@@ -100,7 +100,7 @@ end
 
     # Compute Jacobian using previously defined `lorenz_jac!` function
     jac = Matrix{Taylor1{eltype(q0)}}(undef, dof, dof)
-    lorenz_jac!(jac, t, x)
+    lorenz_jac!(t, x, jac)
 
     # Jacobian values should be equal
     @test constant_term.(jac) == jac_autodiff
